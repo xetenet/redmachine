@@ -131,6 +131,8 @@ Paste this into your AI assistant's chat, in the project where it works:
 Use redmachine to check that our tests would catch a mistake in the lines we changed.
 
 1. Run `redmachine --version`. If the command is not found, stop and tell me.
+   Work in a git repository. If this folder is not one, run `git init` and commit
+   everything before you change any code, so redmachine can see what you changed.
 2. Run `redmachine --list`. Show me its `base:` line, its `test:` line and its
    `changed lines:` line. RedMachine judges what changed since this branch left
    main (or master), plus work not committed yet. If it counts 0 lines, or the
