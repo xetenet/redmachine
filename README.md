@@ -189,6 +189,8 @@ Only when it applies:
   for me to decide.
 ```
 
+RedMachine itself runs on any machine. If a local model drives it, use a 27B-class model on a machine with 32 GB of memory. In our trials that got through most runs; models of 20B and under did not. Results by model: [redmachine.dev/models](https://redmachine.dev/models/).
+
 ## Xcode apps
 
 You need Xcode, a simulator runtime for your app (Xcode > Settings > Components) and a unit-test target with one passing test. RedMachine finds the project and the scheme with tests. In a copy of your project, it breaks one changed Swift line at a time, builds, and runs your unit tests on its own simulator, "redmachine tests (do not use)". Each line costs about one build plus one test run.
