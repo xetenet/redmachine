@@ -388,7 +388,7 @@ With `--expect`, a different id adds `EXPECTED proof id ID, got a different one:
 - The limit must be at least twice the peak of the unbroken check and tests, or the run stops before anything is broken (exit 2) and names the figure to give; so does an unbroken run over the limit.
 - Tests of a broken line stopped for memory: the unbroken commands run again, then the tests with the line broken once more. A second stop makes the line `KILLED [memory limit]`. Otherwise that second run decides the line.
 - A check of a broken line stopped for memory skips that break. With no other break that builds, the line is NOT_TRIED.
-- Memory is read with `ps` (`/bin/ps`, `/usr/bin/ps`, or on the `PATH`). With a memory limit and no working `ps`, the run stops (exit 2); `--max-memory 0` runs without it.
+- Memory is read with `ps` (`/bin/ps`, `/usr/bin/ps`, or on the `PATH`). Every judging run needs a working `ps`, also with `--max-memory 0`: without one the run stops before any line is broken (exit 2) and names the `procps` package on Debian and Ubuntu. `--list` does not need it.
 - In an Xcode run, the app and its test runner inside RedMachine's simulator, and programs that run from its cache folder (a Mac app it built), count as the command's processes. A test bundle with no host app, inside the simulator, is not weighed.
 - In an Xcode run, RedMachine also watches the Mac's free memory. Starting the simulator needs the memory limit plus 1 GB plus about 4 GB free; each line needs the limit plus 1 GB. Swap use that has grown since the run started counts as short. Short before the first line: the run stops (exit 2). Short later: the lines left are NOT_TRIED (`low memory`). Under 1 GB free (or 1% of memory, if more) during a build or test run: the run stops with no verdict and no receipt (exit 130). With `--max-memory 0`, a quarter of the Mac's memory stands in for the limit.
 
@@ -510,6 +510,7 @@ Exit 2 unless the table says 3. Any broken line is put back, and no receipt is w
 
 | Message starts | Cause | What to do |
 | --- | --- | --- |
+| `this machine's id cannot be read` | a machine licence, or `activate`, and no `/etc/machine-id` (a container often has none) | run RedMachine on the machine itself, or give the container a stable `/etc/machine-id`; a new random id each time would use up an activation |
 | `this copy has no license, so it can list but not judge` (or `its license signature does not match`, `is not for this machine`, `is not a license`, and the like) | no valid licence for this machine ([13](#13-licence)) | `redmachine activate YOUR-KEY`; the message gives the address to buy a key |
 | `unknown option` | a misspelt option | see `redmachine --help` |
 | `not inside a git repository` | no repository | `git init`, commit once, run after the next change |
@@ -534,7 +535,7 @@ Exit 2 unless the table says 3. Any broken line is put back, and no receipt is w
 | `the tests of P ran no tests with nothing broken` | the built-in tests ran none, in every project left ([3.3](#33-several-projects-in-one-repository)) | add tests, pass `--test`, or `--exclude` the files |
 | `--timeout N is not longer than the tests took` | the limit is below the baseline | raise `--timeout`, or leave it out |
 | `--max-memory N is less than twice what` (or `is not more than`) | the limit is under twice the baseline peak | give the figure the message names, or `0` |
-| `the memory limit cannot be kept here: no working ps` | no usable `ps` | install one, or pass `--max-memory 0` |
+| `no working ps was found` | no usable `ps` | install one (Debian or Ubuntu: `apt-get install procps`) |
 | `after a break of FILE:N ran past its time limit` (or `held more than`) | something a stopped run left behind fails the unbroken tests | clear it; run again |
 | `with nothing broken, the tests of P took Ns` | the limit is too short for this machine | raise `--timeout` |
 | `.redmachine-waive line N` | a bad waiver line, or a key twice | fix the line ([9](#9-waivers)) |

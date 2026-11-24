@@ -35,6 +35,7 @@ Judging needs a licence, in CI as anywhere else. Without one the job stops with 
 - A licence is a signed file bound to one machine. A job can use it only on the machine it was activated on. One key has two activations, and each `redmachine activate` run asks the service again, so do not activate on every job.
 - Primary setup: a runner you keep (a self-hosted runner). Run `redmachine activate YOUR-KEY` once on it, as the user the jobs run as. The licence is saved under that user's home (`~/.config/redmachine/license`), and later jobs find it.
 - Alternative: pass the licence text from a secret. Store the text of the saved licence file (it starts with `redmachine-license`) as the secret or CI variable `REDMACHINE_LICENSE`, and give it to the judging step. This works only on the machine the licence was activated for.
+- A container needs a stable `/etc/machine-id`: run RedMachine on the machine itself, or mount the host's file into the container. A new random id each time would use up an activation, and with no readable id `redmachine activate` stops before it contacts the service.
 - RedMachine looks for a licence in this order: `REDMACHINE_LICENSE` (the licence text, or the path of a licence file), then `$XDG_CONFIG_HOME/redmachine/license`, then `~/.config/redmachine/license`. The first place that exists is the only one read. Checking never uses the network.
 
 ## 3. GitHub Actions
@@ -178,7 +179,7 @@ All codes are in the reference, [6.4](HOW-IT-WORKS.md#64-exit-codes), with every
 ## 7. Cautions
 
 - **Set a job time limit.** The baseline has no time limit of its own, and each changed line costs a test run. Allow your test time times the lines you expect ([time limits](HOW-IT-WORKS.md#71-time-limits)).
-- **Set `--max-memory` under the container's limit.** The default is a quarter of the memory the machine reports, which can be more than a container is allowed. The runner needs a working `ps`; a BusyBox `ps` should be expected to stop the run unless you pass `--max-memory 0` ([memory limit](HOW-IT-WORKS.md#72-memory-limit)).
+- **Set `--max-memory` under the container's limit.** The default is a quarter of the memory the machine reports, which can be more than a container is allowed. The runner needs a working `ps` (on Debian or Ubuntu, the `procps` package); a BusyBox `ps` should be expected to stop the run ([memory limit](HOW-IT-WORKS.md#72-memory-limit)).
 - **Flaky tests.** A test that fails at random while a line is broken makes the line KILLED. Use `--confirm-kills` where a false PASS costs more than time ([7.4](HOW-IT-WORKS.md#74-the-check-after-the-run-and-confirm-kills)).
 - **Use a fresh checkout per job.** After a `kill -9`, the next run in that checkout must put the broken line back first ([recovery](HOW-IT-WORKS.md#82-interrupts-and-recovery)).
 - **Xcode projects need a Mac.** On these Linux jobs, a changed Swift file in an Xcode project stops the run (exit 2, `This is an Xcode project, and Xcode is needed to build it`). Judge it on a Mac with Xcode, or leave it out with `--exclude` ([Xcode projects](HOW-IT-WORKS.md#37-xcode-projects)).
@@ -190,10 +191,10 @@ Version 0.1.0. Each build is named by the first eight characters of the SHA-256 
 
 Every platform ran a 20-step check in a scratch home: `--version`, `--help`, `--list`, the licence messages with no licence, the refusal of a run with no licence, a machine licence supplied in `REDMACHINE_LICENSE`, a small Python repository that gave one KILLED and one SURVIVED line with exit 1 and a receipt, `redmachine verify` on that receipt, and `verify` refusing an altered copy. All 20 steps passed on all four platforms below.
 
-**Linux x86_64** (program 4f79eb5a). Run on Linux 6.6 under WSL 2, which is how it runs on Windows. The binary is a statically linked position-independent executable. It passed the 20 steps.
+**Linux x86_64** (program f017963c). Run on Linux 6.6 under WSL 2, which is how it runs on Windows. The binary is a statically linked position-independent executable. It passed the 20 steps.
 
-**Linux arm64** (program f4e9e6f0). Run under `qemu-aarch64`, not on arm64 hardware. The binary is a statically linked aarch64 executable. Only the program was emulated; `python3` and `git` ran as x86_64. It passed the 20 steps.
+**Linux arm64** (program e62af8f9). Run under `qemu-aarch64`, not on arm64 hardware. The binary is a statically linked aarch64 executable. Only the program was emulated; `python3` and `git` ran as x86_64. It passed the 20 steps.
 
-**macOS on Apple silicon** (program 1eb32736, the universal file, signed with the hardened runtime and accepted by Apple's notary service). Run on macOS 27.2. It passed the 20 steps. The README install lines were run as written in a scratch home and `redmachine --version` printed the version. Xcode project support was built and tested with current Xcode on Apple silicon only.
+**macOS on Apple silicon** (program a2b6e05d, the universal file, signed with the hardened runtime and accepted by Apple's notary service). Run on macOS 27.2. It passed the 20 steps. The README install lines were run as written in a scratch home and `redmachine --version` printed the version. Xcode project support was built and tested with current Xcode on Apple silicon only.
 
-**macOS on Intel**. The Intel half of the universal program (the same program 1eb32736) passed the 20 steps under Rosetta on Apple silicon, not on an Intel Mac. It was not run on an Intel Mac, and Xcode projects were not run on Intel.
+**macOS on Intel**. The Intel half of the universal program (the same program a2b6e05d) passed the 20 steps under Rosetta on Apple silicon, not on an Intel Mac. It was not run on an Intel Mac, and Xcode projects were not run on Intel.

@@ -2,7 +2,7 @@
 
 RedMachine takes the lines your git change added or edited, breaks each one in turn, and runs your project's check and tests. This is mutation testing on your changed lines. A line counts as proven when a test goes red while it is broken: one test noticed one break. A changed line that no test notices fails the run.
 
-It is one program with no dependencies, for macOS (Apple silicon and Intel), Linux (x86_64 and arm64) and Windows through WSL 2. It needs `git`, `sh` and `ps`, plus what your tests need, and `curl` once, to activate your licence. Built in: Rust, Python, JavaScript and TypeScript, Go, and Swift, including Xcode apps (preview); other languages run with your own commands. Preview means tried on small projects only; its SwiftUI rules read text rather than parse code.
+It is one program with no dependencies, for macOS (Apple silicon and Intel), Linux (x86_64 and arm64) and Windows through WSL 2. It needs `git`, `sh` and `ps`, plus what your tests need, and `curl` once, to activate your licence. On Linux the licence is bound to the machine id in `/etc/machine-id`. Built in: Rust, Python, JavaScript and TypeScript, Go, and Swift, including Xcode apps (preview); other languages run with your own commands. Preview means tried on small projects only; its SwiftUI rules read text rather than parse code.
 
 RedMachine runs your tests against code it has broken on purpose. If your code deletes files, kills processes or sends anything, a broken line can do that wrongly. Run such projects in CI, a container or a spare account.
 
@@ -23,7 +23,16 @@ export PATH="$HOME/.local/bin:$PATH"
 redmachine --version
 ```
 
-On Linux, use `sha256sum -c` and a Linux archive. On Windows, do the same inside a WSL 2 shell with a Linux archive. Put the `export` line in your shell's startup file to keep it.
+On Linux, the first four lines are these (for arm64, write `linux-arm64` in place of `linux-x86_64`), and the rest are the same with the Linux folder name:
+
+```
+curl -LO https://github.com/xetenet/redmachine/releases/download/v0.1.0/redmachine-0.1.0-linux-x86_64.tar.gz
+curl -LO https://github.com/xetenet/redmachine/releases/download/v0.1.0/SHA256SUMS
+grep linux-x86_64 SHA256SUMS | sha256sum -c
+tar xzf redmachine-0.1.0-linux-x86_64.tar.gz
+```
+
+On Windows, do the Linux steps inside a WSL 2 shell. The program is at `~/.local/bin/redmachine`, and that full path always works, also for an assistant that starts a new shell for every command. The `export` line lasts for one shell. To keep it, add it to your shell's startup file yourself; an assistant should use the full path and leave that file alone.
 
 ## Licence and price
 
@@ -34,6 +43,8 @@ $79 while Swift and Xcode support is in preview. $99 when it leaves preview. One
 3. Run `redmachine license` to see what it found. It exits 0 for a valid licence and 1 otherwise.
 
 The licence is a small signed file bound to the machine. It is saved in `$XDG_CONFIG_HOME/redmachine/license`, or `~/.config/redmachine/license` when that is not set. Checking it never contacts the network. Activation contacts redmachine.dev once, with `curl`, and sends your key and a one-way hash of the machine's id. RedMachine never sends your code, your tests or your results to any network or server. XETENET LLC stores zero user data anywhere.
+
+A container needs a stable `/etc/machine-id`. The licence is bound to the machine id, a container often has none, and a new random id each time would use up an activation. Without a readable id, `redmachine activate` stops before it contacts the service.
 
 Without a licence, `--version`, `--help`, `--list`, `verify`, `license` and `activate` still run. Judging needs a key: the run stops with exit 2 and points to https://redmachine.dev/buy and `redmachine activate YOUR-KEY`. The `REDMACHINE_LICENSE` variable can hold a licence, or the path of one, and is read before the saved file ([CI](docs/CI.md#licence-in-ci)).
 
@@ -130,34 +141,52 @@ Paste this into your AI assistant's chat, in the project where it works:
 ```text
 Use redmachine to check that our tests would catch a mistake in the lines we changed.
 
-1. Run `redmachine --version`. If the command is not found, stop and tell me.
-   Work in a git repository. If this folder is not one, run `git init` and commit
-   everything before you change any code, so redmachine can see what you changed.
-2. Run `redmachine --list`. Show me its `base:` line, its `test:` line and its
-   `changed lines:` line. RedMachine judges what changed since this branch left
-   main (or master), plus work not committed yet. If it counts 0 lines, or the
-   base is not what we branched from, stop and tell me. On a large workspace,
-   give a test command narrowed to the code you changed (for example one package
-   or one test file) with --test, and a matching --check, so each broken line
-   costs seconds. Give the same options to every later run.
+1. Run `~/.local/bin/redmachine --version`. If that file is not there, try
+   `redmachine --version`. Use the one that works for every command below. If
+   neither works, stop and tell me.
+   Work in a git repository. Run `git status`. Only if it says this is not a git
+   repository, run `git init` and commit everything before you change any code,
+   so redmachine can see what you changed. Add `redmachine-receipt.jsonl` to
+   `.gitignore` if it is not already there.
+   If any command says this copy has no license, or that its license is not
+   valid, stop and tell me. Buying a key and running `redmachine activate` are
+   mine to do.
+2. Run `redmachine --list`. Keep its `base:` line, its `test:` line and its
+   `changed lines:` line for your final answer. RedMachine judges what changed
+   since this branch left main (or master), plus work not committed yet. If it
+   counts 0 lines, stop and tell me.
 3. Run `redmachine`. Exit code 0 means PASS and 1 means FAIL. For any other exit
    code, show me the message and stop. If it prints `baseline: RED`, our tests
    already fail with nothing broken: fix that first, then run it again.
 4. For every line marked SURVIVED, read the `line:` and `broken as:` lines under
    it. `broken as:` is a broken version of that line that every test passed.
-   Write a test that fails
-   with that broken version and passes with the real line. Do not change the
-   line itself, do not weaken or delete tests, and do not add anything to
-   .redmachine-waive. If a note under the line says no test here can reach it, or
-   you cannot write such a test, tell me why. If a SURVIVED line cannot be made
-   to fail any test because it is redundant (other code already does its job),
-   do not weaken or delete tests and do not waive it yourself: say which line,
-   why it is redundant, propose deleting it, and stop for me to decide.
-5. If lines are NOT_TRIED because of the --max limit, run `redmachine --max 200`.
-6. Run `redmachine` again and repeat step 4 until the RESULT line says PASS, or
-   until the only lines left are UNVIABLE.
-7. Show me the last RESULT line. List every line marked UNVIABLE with its `line:`
-   text: those are not proven, and I decide what to do about them.
+   Write a test that fails with that broken version and passes with the real
+   line. Do not change the line itself, do not weaken or delete tests, and do
+   not add anything to .redmachine-waive.
+5. Run `redmachine` again and repeat step 4 until the RESULT line says PASS, or
+   until the only lines left are UNVIABLE. If a line is still SURVIVED after two
+   tries at a test, stop and tell me which line and what you tried.
+6. In your final answer, show me the three lines you kept in step 2 and the last
+   RESULT line. List every line marked UNVIABLE with its `line:` text: those are
+   not proven, and I decide what to do about them. Leave
+   `redmachine-receipt.jsonl` as it is. Do not edit or delete it, and do not
+   commit it unless I ask.
+
+Only when it applies:
+- The base in step 2 is not what we branched from: add `--base BRANCH` (the
+  branch we did branch from) to every command. If you do not know it, stop and
+  tell me.
+- A run is slow because the workspace is large: give a test command narrowed to
+  the code you changed (for example one package or one test file) with --test,
+  and a matching --check, so each broken line costs seconds. Give the same
+  options to every later run. On a small project, add no options.
+- Lines are NOT_TRIED because of the --max limit: run `redmachine --max 200`.
+- A note under a SURVIVED line says no test here can reach it, or you cannot
+  write such a test: tell me why.
+- A SURVIVED line cannot be made to fail any test because it is redundant (other
+  code already does its job): do not weaken or delete tests and do not waive it
+  yourself. Say which line, why it is redundant, propose deleting it, and stop
+  for me to decide.
 ```
 
 ## Xcode apps
