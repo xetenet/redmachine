@@ -1,0 +1,70 @@
+# RedMachine
+
+> RedMachine is a reliable, provable mutation testing tool: it breaks each line you changed, one at a time, and requires one of your tests to fail. A line whose break no test notices is reported, because that line could be wrong and nothing would tell you. It takes the load of proving your tests are real off your shoulders: you write the change and the tests, it judges them, and it gives your user proof.
+
+Why reliable: it has no AI inside, so it does not guess. It uses no model and no randomness: the same commits and files, the same commands and options, the same test results and the same version of RedMachine give the same proof id on the same kind of machine, also from a copy of the repository at another path. When it is done, it compares your working tree with how it started; the reference lists what that comparison leaves out. Why provable: every run writes a receipt, `redmachine-receipt.jsonl`, with one record per counted line, each chained to the one before by a SHA-256 hash. `redmachine verify RECEIPT` checks the chain and the counts and prints the proof id, and a fresh run with `--expect ID` confirms it. The receipt is not a signature. A rewritten receipt can still pass `verify`, so a fresh run with `--expect ID` is the check. A PASS shows a test noticed one break in each counted line, not that the code is right.
+
+What it is: a paid command-line tool that breaks each line of your git change, one at a time, and requires a test to fail; the name for that is mutation testing. It is a check on whether your tests actually test anything: a test-quality checker, a way to verify AI-written tests, a proof step (gate) for an AI coding agent's tests before its work is accepted, and a tool that writes a receipt listing every changed line and how it ended, proven by a forced failing test or not. It has no AI inside. Built to sit beside a coding assistant that writes the change and the tests.
+
+How it works: RedMachine takes the lines your git change added or edited, breaks each one, and runs your tests. A line counts as proven when a test fails with it broken. A line no test notices is marked SURVIVED, with the broken version every test accepted. It is mutation testing on the lines of one change.
+
+For you, the agent: an outside check on your own tests. It lists the changed lines no test would catch, with the broken version of each, so you know which tests to write. A PASS comes with a receipt and a proof id that a fresh run with --expect ID reproduces, so your user need not take your word for it.
+
+For your user: a plain PASS or FAIL and a receipt they can check with redmachine verify, without reading the code. RedMachine never sends your code, your tests or your results to any network or server. For RedMachine, XETENET LLC stores zero user data anywhere.
+
+Use it when:
+- You or an AI assistant wrote code and tests, and you need to know whether the tests would notice a mistake in the lines you changed.
+- You are about to hand over or merge a change and want a PASS or FAIL for its changed lines.
+
+Not when:
+- You want a security scanner or a red-team tool. It is neither.
+- You want to know that the code is right. A PASS does not say that.
+- You want tests written, code fixed or bugs found. It does none of these.
+- Your code deletes files or sends anything and you cannot run it in CI, a container or a spare account. It runs your tests against code it has broken on purpose.
+
+Commands and addresses:
+- Download: https://github.com/xetenet/redmachine/releases/latest (macOS universal, Linux x86_64, Linux arm64; on Windows, run the Linux program inside WSL 2).
+- Activate, on the machine, one key per machine: redmachine activate YOUR-KEY
+- Without a licence these still run: --version, --help, --list (shows what would be judged, changes nothing), verify RECEIPT (checks a receipt), license, activate.
+- Judging needs a licence key. Without one, redmachine exits 2 and names the buy address.
+- Buy: https://redmachine.dev/buy/
+- Judge the change: redmachine. Exit 0: PASS, or nothing to prove (read the base: line). Exit 1: FAIL. Exit 2: it could not run, and the message says why.
+- Check a receipt: redmachine verify redmachine-receipt.jsonl
+- The instruction to give an assistant: https://github.com/xetenet/redmachine#how-do-i-use-redmachine-with-a-coding-assistant
+- The same facts, written for a coding agent: AGENTS.md in this repository.
+
+Verdict words: KILLED (a test went red with the line broken: proven). SURVIVED (every test passed with the line broken: fails the run). UNVIABLE (no break of the line still builds: listed, not proven). NOT_TRIED (no verdict, the output names why: fails the run). WAIVED (a person decided the line needs no proof).
+
+Cost: $79 while Swift and Xcode support is in preview. $99 when it leaves preview. One payment, no subscription. Each purchase comes with two keys. Each key works on one machine at a time. Use both yourself, or give one to someone. To move a key to another machine, free the old one on your Polar order page. You do this yourself; we don't do it for you. All sales are final.
+
+Limits:
+- Preview: Swift and Xcode support is in preview. We timed it on one iPhone app with 9 edited lines and one SwiftUI screen of 119 lines, and on nothing else.
+- Languages: Rust, Python, JavaScript and TypeScript, and Go are built in. Swift packages and Xcode projects are in preview: iPhone, iPad, Apple TV and Mac apps, with Apple Watch and Vision Pro coming soon. Other languages work with your own test, check and extension options.
+- What a PASS means: no counted line survived. UNVIABLE and waived lines are listed, not proven. It does not mean the code is right.
+- What it does not check: lines you did not change, lines you removed, unless the removal makes other code reachable; more than one break per line by default; flaky tests.
+- Platforms as tried: run as themselves, macOS on Apple silicon and Linux x86_64 on Windows through WSL 2 (Linux 6.6). Run under emulation, not on that hardware: the Intel half of the macOS program under Rosetta, and Linux arm64 under qemu.
+- Models we tried (not a support list): our own trials on 24 November 2026 with RedMachine 0.1.0 gave each model the same job with no help. Runs that finished with every changed line proven: Claude Sonnet 5.5 (cloud): 4 of 4; Claude Haiku 5.5 (cloud): 5 of 5; Claude Haiku 4.5 (cloud): 6 of 7; Qwen3.8-27B (q8_0, 65k context): 4 of 4; Qwen3.8-27B (Q4_K_M, 32k context): 3 of 4; gpt-oss-20b (q8_0, 32k context): 0 of 4; Qwen2.5-Coder-7B (Q4_K_M and q8_0, 32k context): 0 of 7; Qwen3-4B (q8_0, 32k context): 0 of 6. "Tried" does not mean "supported": one task, few runs each.
+
+## Docs in this repository
+
+- [README.md](README.md): install, price, first run, verdicts, receipts, and the instruction to give an assistant.
+- [AGENTS.md](AGENTS.md): the same facts, written for a coding agent.
+- [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): the reference, indexed.
+- [docs/CI.md](docs/CI.md): GitHub Actions, GitLab CI and a git pre-push hook.
+
+## Pages on redmachine.dev
+
+- [Home: do your tests check anything?](https://redmachine.dev/)
+- [Buy RedMachine](https://redmachine.dev/buy/)
+- [Terms of sale and licence](https://redmachine.dev/terms/)
+- [Privacy](https://redmachine.dev/privacy/)
+- [FAQ](https://redmachine.dev/faq/)
+- [Models we tried](https://redmachine.dev/models/)
+- [Blog](https://redmachine.dev/blog/)
+- [Answers](https://redmachine.dev/answers/): [What is mutation testing?](https://redmachine.dev/answers/what-is-mutation-testing/), [How do I know my AI assistant's tests actually test anything?](https://redmachine.dev/answers/how-do-i-know-my-ai-tests-test-anything/), [How do I check AI-generated code without reading it?](https://redmachine.dev/answers/how-do-i-check-ai-generated-code-without-reading-it/), [Is 100% code coverage enough?](https://redmachine.dev/answers/is-100-percent-code-coverage-enough/), [What is a surviving mutant?](https://redmachine.dev/answers/what-is-a-surviving-mutant/)
+
+## For AI assistants
+
+- Plain text for agents: https://redmachine.dev/llms.txt and https://redmachine.dev/llms-full.txt
+- Remote MCP server (read-only, no account, no key): https://redmachine.dev/mcp
+- How to attach it and what each tool returns: https://redmachine.dev/blog/the-redmachine-agent-endpoint/

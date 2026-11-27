@@ -102,7 +102,7 @@ Every option that takes a value also takes `--name=value`. An unknown option sto
 | Swift (`swift`), preview | `swift` | package: `swift test`; Xcode: [3.7](#37-xcode-projects) | package: `swift build --build-tests` |
 
 - Platforms: macOS (Apple silicon and Intel), Linux (x86_64 and arm64) and Windows through WSL 2, where the Linux program runs. Xcode projects need a Mac with Xcode.
-- Preview: Swift and Xcode support is new in this version and tried on small projects only: not timed on a large app, and its SwiftUI rules read text rather than parse code.
+- Preview: Swift and Xcode support is new in this version. It was timed only on one iPhone app with 9 edited lines and one 119-line SwiftUI screen in a Swift package, and its SwiftUI rules read text rather than parse code.
 - Commands run in the project folder with `sh -c`, empty standard input and `PYTHONDONTWRITEBYTECODE=1`. Their output goes to `.git/redmachine/run.log`, which holds the last command's output after a run. Each tool must be on the `PATH`.
 - TypeScript, TSX, JSX, MTS and CTS files need a `tsconfig.json` in the project and `tsc`: the nearest `node_modules/.bin/tsc` up to the repository top, else `tsc` on the `PATH`. A file in no tsconfig program cannot be checked and stops the run; a `.jsx` file needs `allowJs`.
 
@@ -154,7 +154,7 @@ Changed source of a built-in kind is set aside and named in a note, so a PASS do
 
 On macOS, when the change has a `.swift` file, or with `--profile swift`, the whole run works in a copy of the repository, every language in it. Your files are never written.
 
-- The copy is an APFS clone at `~/Library/Caches/redmachine/ID/tree`, or under `$REDMACHINE_CACHE`. It is deleted at the end of the run. Build folders stay, one per repository path and project (112 MB for a small package). `~/Library/Caches/redmachine` can be deleted when no run is going.
+- The copy is an APFS clone at `~/Library/Caches/redmachine/ID/tree`, or under `$REDMACHINE_CACHE`. It is deleted at the end of the run. Build folders stay, one per repository path and project. `~/Library/Caches/redmachine` can be deleted when no run is going.
 - A Swift package's built-in commands add `--scratch-path {cache}/swiftpm.noindex/…`, so a later run reuses the build. If the baseline check fails in a kept build folder, the folder is deleted and the check runs once more, with a note. `--list` leaves `{cache}` unfilled, with a note.
 - The header adds `copy: judged in a copy at PATH; your files, Xcode, previews and your simulators are not touched`.
 - In your repository RedMachine writes only the receipt and `.git/redmachine/` (lock, run log, saved files).
@@ -176,7 +176,7 @@ On macOS, when the change has a `.swift` file, or with `--profile swift`, the wh
 - **Build failures:** only a compiler or linker failure means a break does not build: the next break is tried, and the line is UNVIABLE when none builds. When another step fails (a script phase such as SwiftLint, code signing), the break is set aside; if no other break builds, the line is NOT_TRIED and names the step (`the script phase "Lint" of target Demo`). After a build that exits other than 65, RedMachine builds the unbroken code; red stops the run (exit 2). If the app does not build with nothing broken, the red baseline says to build it in Xcode first (Product > Build For > Testing).
 - **What runs and what is judged:** UI-test targets are built, but their tests are skipped for each line (a scheme with only UI tests runs them for each line). Test files are under a `Tests` folder or a folder named like a test target, or have a line starting `import XCTest`, `import Testing` or `@testable import`. `#Preview` blocks, `PreviewProvider` types and SwiftUI layout and display lines with literal arguments only are left out ([4.4](#44-lines-left-out)). Objective-C, C, C++ and Metal files, and tracked changes under `Pods/` or `Carthage/`, fail the run until left out with `--exclude`. Storyboards, xibs, asset catalogs, plists, entitlements and xcconfig files are not source.
 - **View code:** unit tests cannot reach SwiftUI view code, so its judged lines usually survive. A note after the survivor list counts them, names their files and says what to do (a model type, a UI test run by `--test`, a waiver, `--exclude`); it changes no verdict, exit code or receipt.
-- **Time:** about one build plus one test run per line. On a small app: about 6 seconds for a cold build, 5 to 12 seconds per line. The first run builds from scratch, may download packages and prints `first run here:`; after the first line, `estimate:` gives the time left.
+- **Time:** about one build plus one test run per line. On an iPhone app with 9 edited lines: a cold build took a median of 6.5 seconds over four builds, and each of 24 judged lines took 5.0 to 12.2 seconds. The first run builds from scratch, may download packages and prints `first run here:`; after the first line, `estimate:` gives the time left.
 - **Will not build in the copy:** a project that uses files outside the repository (`../SharedKit`). A custom build location (`SYMROOT`, `OBJROOT`, `CONFIGURATION_BUILD_DIR`) stops the run.
 - **Crashes:** a break that crashes your app leaves a crash report in `~/Library/Logs/DiagnosticReports`.
 - **Your own commands:** your own `--check` needs your own `--test`. In them, `{simulator}` becomes the id of RedMachine's simulator and `{cache}` its folder for this repository. An `xcodebuild` without `-derivedDataPath` uses Xcode's build folder and your simulators; a note says so. `--list` runs no Xcode tool and shows `<scheme>` and `<destination>`.
@@ -374,11 +374,11 @@ With `--expect`, a different id adds `EXPECTED proof id ID, got a different one:
 
 - The baseline has no time limit; it has the memory limit. With the built-in Xcode commands, each baseline command may take up to an hour.
 - The test limit for a broken line is `--timeout`, or 3 x the whole seconds of the baseline test run + 3, at least 60. The `baseline:` line prints it.
-- The check limit is 3 x the slowest baseline check + 3, and never less than the test limit. The first time a check runs past it in a project, RedMachine measures a rebuild with nothing broken and tries that check once more, then raises the limit if needed; notes say so.
+- The check limit is 3 x the longest baseline check time + 3, and never less than the test limit. The first time a check runs past it in a project, RedMachine measures a rebuild with nothing broken and tries that check once more, then raises the limit if needed; notes say so.
 - A line whose check runs out of time, with no other break that builds, is NOT_TRIED.
 - Tests past the limit are stopped, the file is put back, and the unbroken check and tests of every project run again. If they pass, the line is `KILLED [timeout]`. If not, something was left behind (a process, a lock, a port) and the run stops (exit 2).
 - In an Xcode run, the line is then broken, built and tested once more. It is `KILLED [timeout]` only if that run also goes past the limit; otherwise that run decides the line.
-- If that re-run also runs out of time, a last run gets a far longer limit; if it passes, the run stops: the limit is too short.
+- If that re-run also runs out of time, a last run gets a longer limit; if it passes, the run stops: the limit is too low.
 - Before each break and each put-back, RedMachine waits for the next whole second, so tools that compare file times in whole seconds (`make`, Python's bytecode cache) always rebuild.
 
 ### 7.2 Memory limit
@@ -390,7 +390,7 @@ With `--expect`, a different id adds `EXPECTED proof id ID, got a different one:
 - A check of a broken line stopped for memory skips that break. With no other break that builds, the line is NOT_TRIED.
 - Memory is read with `ps` (`/bin/ps`, `/usr/bin/ps`, or on the `PATH`). Every judging run needs a working `ps`, also with `--max-memory 0`: without one the run stops before any line is broken (exit 2) and names the `procps` package on Debian and Ubuntu. `--list` does not need it.
 - In an Xcode run, the app and its test runner inside RedMachine's simulator, and programs that run from its cache folder (a Mac app it built), count as the command's processes. A test bundle with no host app, inside the simulator, is not weighed.
-- In an Xcode run, RedMachine also watches the Mac's free memory. Starting the simulator needs the memory limit plus 1 GB plus about 4 GB free; each line needs the limit plus 1 GB. Swap use that has grown since the run started counts as short. Short before the first line: the run stops (exit 2). Short later: the lines left are NOT_TRIED (`low memory`). Under 1 GB free (or 1% of memory, if more) during a build or test run: the run stops with no verdict and no receipt (exit 130). With `--max-memory 0`, a quarter of the Mac's memory stands in for the limit.
+- In an Xcode run, RedMachine also watches the Mac's free memory. Starting the simulator needs the memory limit plus 1 GB plus about 4 GB free; each line needs the limit plus 1 GB. Swap use that has grown since the run started counts as short of memory. Short of memory before the first line: the run stops (exit 2). Short of memory later: the lines left are NOT_TRIED (`low memory`). Under 1 GB free (or 1% of memory, if more) during a build or test run: the run stops with no verdict and no receipt (exit 130). With `--max-memory 0`, a quarter of the Mac's memory stands in for the limit.
 
 ### 7.3 Processes
 
@@ -537,7 +537,7 @@ Exit 2 unless the table says 3. Any broken line is put back, and no receipt is w
 | `--max-memory N is less than twice what` (or `is not more than`) | the limit is under twice the baseline peak | give the figure the message names, or `0` |
 | `no working ps was found` | no usable `ps` | install one (Debian or Ubuntu: `apt-get install procps`) |
 | `after a break of FILE:N ran past its time limit` (or `held more than`) | something a stopped run left behind fails the unbroken tests | clear it; run again |
-| `with nothing broken, the tests of P took Ns` | the limit is too short for this machine | raise `--timeout` |
+| `with nothing broken, the tests of P took Ns` | the limit is too low for this machine | raise `--timeout` |
 | `.redmachine-waive line N` | a bad waiver line, or a key twice | fix the line ([9](#9-waivers)) |
 | `the receipt path PATH holds something that is not a redmachine receipt` | `--receipt` names another file | give another path |
 | `redmachine works on a quick copy of your project` | the project is on another disk, or not APFS | move it to the Mac's main disk |
@@ -555,7 +555,7 @@ Exit 2 unless the table says 3. Any broken line is put back, and no receipt is w
 | `redmachine could not start its own iPhone simulator` (or `iPad simulator`, `Apple TV simulator`, or `remove the app from`) | the simulator failed | quit Simulator and Device Hub; if it repeats, restart the Mac |
 | `This project sends its build output to`, `xcodebuild could not` | a custom build location, or a project Xcode cannot read | fix it in Xcode |
 | `With your own --check for an Xcode project` | `--check` without `--test` | give both |
-| `Your Mac has about N GB of memory free`, `Your Mac started to swap`, `Your Mac ran low on memory while` (exit 130) | too little free memory | quit apps, or a smaller `--max-memory` |
+| `Your Mac has about N GB of memory free`, `Your Mac started to swap`, `Your Mac ran low on memory while` (exit 130) | too little free memory | quit apps, or a lower `--max-memory` |
 | `the build of P stopped working with nothing broken` (or `the tests of P`) | the unbroken build or tests fail after a break | check signing, packages and the simulator |
 | `FILE was changed by something else` | an edit during the run (exit 3) | compare with the saved copy it names |
 | `an earlier run was cut off with a line broken in FILE, and the file has been edited since` | a `kill -9`, then an edit (exit 3) | put the file right, then delete `.git/redmachine/journal` |
@@ -582,13 +582,13 @@ Read these before you trust a PASS.
 
 ## 13. Licence
 
-- **What is sold.** One payment. $79 while Swift and Xcode support is in preview, $99 when it leaves preview. A key works on two machines (two activations, flat). All sales are final.
+- **What is sold.** One payment. $79 while Swift and Xcode support is in preview. $99 when it leaves preview. Each purchase comes with two keys. Each key works on one machine at a time. Use both yourself, or give one to someone. To move a key to another machine, free the old one on your Polar order page. You do this yourself; we don't do it for you. All sales are final.
 - **What runs without one.** `--version`, `--help`, `--list`, `verify`, `license` and `activate`. Judging does not: the run stops with exit 2, says why, and gives `Get a key at https://redmachine.dev/buy` and `Then run: redmachine activate YOUR-KEY`.
-- **`redmachine activate KEY`.** A key is 8 to 128 letters, digits, `-` or `_`. RedMachine runs `curl` once to send the key and a one-way hash of the machine's id to `https://redmachine.dev/api/activate`, checks that the answer is a valid licence for this machine, and saves it. Exit 0 saved, 2 not. A key already active on two machines is refused; free one from your Polar order page, then run `activate` again. Running it again on a machine that already has a licence asks the service again.
-- **The licence file.** A small signed text file bound to this machine (a hash of the macOS hardware UUID, or of `/etc/machine-id`). Checking it reads the file and verifies the signature. It never contacts the network.
+- **`redmachine activate KEY`.** A key is 8 to 128 letters, digits, `-` or `_`. RedMachine runs `curl` once to send the key and a one-way hash of the machine's id to `https://redmachine.dev/api/activate`, checks that the answer is a valid licence for this machine, and saves it. Exit 0 saved, 2 not. A key already active on a machine is refused; free it from your Polar order page, then run `activate` again. Running it again on a machine that already has a licence asks the service again.
+- **The licence file.** A signed text file of at most 4096 bytes, bound to this machine (a hash of the macOS hardware UUID, or of `/etc/machine-id`). Checking it reads the file and verifies the signature. It never contacts the network.
 - **Where it is looked for, in order.** `REDMACHINE_LICENSE`: the licence text itself (it starts with `redmachine-license`, and `\n` stands for a new line), or else the path of a licence file. Then `$XDG_CONFIG_HOME/redmachine/license`. Then `~/.config/redmachine/license`. The first place that exists is the only one read: if it holds a bad licence, the later places are not tried.
 - **`redmachine license`.** Prints `license: valid` or `license: none found` or `license: NOT VALID` with the reason, where it was found, its kind and issue date, and this machine's id hash. Exit 0 when valid, 1 when not.
-- **Data.** XETENET LLC stores zero user data anywhere. The activation service keeps no database and no log. The count of machines per key is held by the seller, Polar, against your order.
+- **Data.** For RedMachine, XETENET LLC stores zero user data anywhere. The activation service keeps no database and no log. Which machine each key is active on is held by the seller, Polar, against your order.
 
 ## Index
 

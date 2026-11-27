@@ -32,8 +32,8 @@ Judging needs a licence, in CI as anywhere else. Without one the job stops with 
 
 **Not tried: a hosted runner that is a new machine for each job.** Whether its machine id stays the same from job to job has not been checked, and a container image may have no `/etc/machine-id`. A licence that does not match the machine is refused. The examples below do not claim to work on hosted runners.
 
-- A licence is a signed file bound to one machine. A job can use it only on the machine it was activated on. One key has two activations, and each `redmachine activate` run asks the service again, so do not activate on every job.
-- Primary setup: a runner you keep (a self-hosted runner). Run `redmachine activate YOUR-KEY` once on it, as the user the jobs run as. The licence is saved under that user's home (`~/.config/redmachine/license`), and later jobs find it.
+- A licence is a signed file bound to one machine. A job can use it only on the machine it was activated on. Each key works on one machine at a time, and each `redmachine activate` run asks the service again, so do not activate on every job. A CI machine needs its own key: use the second key of your purchase for it, or buy another. Do not use the key that is active on your own machine.
+- Primary setup: a runner you keep (a self-hosted runner). Run `redmachine activate YOUR-KEY` once on it, with a key that is not active on another machine, as the user the jobs run as. The licence is saved under that user's home (`~/.config/redmachine/license`), and later jobs find it.
 - Alternative: pass the licence text from a secret. Store the text of the saved licence file (it starts with `redmachine-license`) as the secret or CI variable `REDMACHINE_LICENSE`, and give it to the judging step. This works only on the machine the licence was activated for.
 - A container needs a stable `/etc/machine-id`: run RedMachine on the machine itself, or mount the host's file into the container. A new random id each time would use up an activation, and with no readable id `redmachine activate` stops before it contacts the service.
 - RedMachine looks for a licence in this order: `REDMACHINE_LICENSE` (the licence text, or the path of a licence file), then `$XDG_CONFIG_HOME/redmachine/license`, then `~/.config/redmachine/license`. The first place that exists is the only one read. Checking never uses the network.
@@ -162,7 +162,7 @@ A FAIL stops the push (`error: failed to push some refs`); a PASS lets it throug
 - It judges the checked-out branch and its uncommitted work, not the commits being pushed. Commit or stash what you do not want judged.
 - `origin/main` is as fresh as your last `git fetch`.
 - `git push --no-verify` skips the hook.
-- It runs your tests about once per changed line. For a large suite, narrow it with `--only` and `--max`, or run it in CI.
+- It runs your tests about once per changed line. To cost fewer test runs, narrow it with `--only` and `--max`, or run it in CI.
 
 ## 6. Exit codes for scripts
 
@@ -189,9 +189,9 @@ All codes are in the reference, [6.4](HOW-IT-WORKS.md#64-exit-codes), with every
 
 Version 0.1.0. Each build is named by the first eight characters of the SHA-256 of the program inside its archive. On 2026-11-23 the final programs were checked as below; the macOS program was checked after it was signed and notarized.
 
-Every platform ran a 20-step check in a scratch home: `--version`, `--help`, `--list`, the licence messages with no licence, the refusal of a run with no licence, a machine licence supplied in `REDMACHINE_LICENSE`, a small Python repository that gave one KILLED and one SURVIVED line with exit 1 and a receipt, `redmachine verify` on that receipt, and `verify` refusing an altered copy. All 20 steps passed on all four platforms below.
+Every platform ran a 20-step check in a scratch home: `--version`, `--help`, `--list`, the licence messages with no licence, the refusal of a run with no licence, a machine licence supplied in `REDMACHINE_LICENSE`, a Python repository that gave one KILLED and one SURVIVED line with exit 1 and a receipt, `redmachine verify` on that receipt, and `verify` refusing an altered copy. All 20 steps passed on all four platforms below.
 
-**Linux x86_64** (program f017963c). Run on Linux 6.6 under WSL 2, which is how it runs on Windows. The binary is a statically linked position-independent executable. It passed the 20 steps.
+**Linux x86_64** (program f017963c). Run on Windows through WSL 2 (Linux 6.6). The binary is a statically linked position-independent executable. It passed the 20 steps.
 
 **Linux arm64** (program e62af8f9). Run under `qemu-aarch64`, not on arm64 hardware. The binary is a statically linked aarch64 executable. Only the program was emulated; `python3` and `git` ran as x86_64. It passed the 20 steps.
 
